@@ -32,13 +32,11 @@ public class Client {
             sent.println(str);
 //            System.out.println("Arguments sent to server: "+str);
 
-            String serverResponse;
-            while(!(serverResponse = received.readLine()).equals("#terminate")) {
+            while(true) {
 //                System.out.println("Server returned: ");
-                System.out.println(serverResponse);
+                System.out.println(received.readLine());
             }
 
-            socket.close();
         } catch (IOException | IllegalArgumentException e) {
             System.out.println(e.getMessage()+"\n");
         }

@@ -3,19 +3,11 @@ import java.net.*;
 import java.util.*;
 
 
-/**
- * The type Server.
- */
 public class Server {
 
     private static final List<Account> accounts = Collections.synchronizedList(new ArrayList<>());
 
 
-    /**
-     * The entry point of application.
-     *
-     * @param args the input arguments
-     */
     public static void main(String[] args) {
 
         ServerSocket server;
@@ -48,18 +40,14 @@ public class Server {
     private static class ClientHandler implements Runnable {
         private final Socket clientSocket;
 
-        /**
-         * Instantiates a new Client handler.
-         *
-         * @param socket the socket
-         */
-// Constructor
+
+        // Constructor
         public ClientHandler(Socket socket) {
             this.clientSocket = socket;
         }
 
 
-        // the thread .......
+        // The thread
         public void run() {
 
             try {
@@ -311,13 +299,7 @@ public class Server {
         }
     }
 
-    /**
-     * Find username int.
-     *
-     * @param username the username
-     * @return the int
-     */
-//Method that returns an index of the place where the username is from
+    //Method that returns an index of the place where the username is from
     public static int findUsername(String username) {
         int index = -1;
 
@@ -330,13 +312,8 @@ public class Server {
         return index;
     }
 
-    /**
-     * Find auth token int.
-     *
-     * @param authToken the auth token
-     * @return the int
-     */
-//Method that returns an index of the place where the authentication token is from
+
+    //Method that returns an index of the place where the authentication token is from
     public static int findAuthToken(String authToken) {
         int index = -1;
 
