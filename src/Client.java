@@ -34,6 +34,7 @@ public class Client {
 
             while(true) {
                 System.out.println(received.readLine());
+
             }
         } catch (IOException e) {
             throw new RuntimeException(e);

@@ -5,7 +5,7 @@ import java.util.*;
 
 public class Server {
 
-    private static List<Account> accounts = Collections.synchronizedList(new ArrayList<>());
+    private static final List<Account> accounts = Collections.synchronizedList(new ArrayList<>());
 
     public static void main(String[] args) {
 
@@ -30,7 +30,7 @@ public class Server {
                 new Thread(clientSock).start();
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
     }
 
@@ -136,21 +136,43 @@ public class Server {
 
                         if (findAuthToken(split[3]) == -1) {
                             System.out.println("wrong token");
+                            break;
                         }
 
+                        int k = accounts.get(findAuthToken(split[3])).getMessageBox().size();
+
+                        for (int i = 0; i <k ; i++) {
+                            System.out.println(k+". from: "+accounts.get(findAuthToken(split[3])).getMessageBox().get(i).getSender());
+                            if (!accounts.get(findAuthToken(split[3])).getMessageBox().get(i).isRead){
+                                System.out.println("*");
+                            }
+                        }
+
+
                         break;
+
+                    //READ MESSAGE---------------------------------------------------------------
                     case 5:
                         System.out.println("--Case 5--");
+
+                        System.out.printf("("+accounts.get(findAuthToken(split[3])).getMessageBox().get(Integer.parseInt(split[4])).getSender()+")"+accounts.get(findAuthToken(split[3])).getMessageBox().get(Integer.parseInt(split[4])).getBody());
+
+
                         break;
+
+                    //DELETE MESSAGE---------------------------------------------------------------
                     case 6:
                         System.out.println("--Case 6--");
+
+                        accounts.get(findAuthToken(split[3])).getMessageBox().remove(Integer.parseInt(split[4]));
+
+
                         break;
                 }
 
 
             } catch (IOException e) {
-                e.printStackTrace();
-                Thread.currentThread().interrupt();
+                throw new RuntimeException(e);
             }
             // command "finally" is omitted
         }
@@ -211,7 +233,7 @@ public class Server {
 
         private String username;
         private int authToken;
-        private List<Message> messageBox = new ArrayList<Message>();
+        private final List<Message> messageBox = new ArrayList<Message>();
 
         //Constructor
         public Account(String username, int authToken) {
