@@ -3,10 +3,19 @@ import java.net.*;
 import java.util.*;
 
 
+/**
+ * The type Server.
+ */
 public class Server {
 
     private static final List<Account> accounts = Collections.synchronizedList(new ArrayList<>());
 
+
+    /**
+     * The entry point of application.
+     *
+     * @param args the input arguments
+     */
     public static void main(String[] args) {
 
         ServerSocket server;
@@ -14,20 +23,21 @@ public class Server {
 
 
         try {
-            // server is listening on port 5858(?)
+            // server is listening on port 5858
             server = new ServerSocket(port);
 
             // running infinite loop accepting client request
-            while (true) {
+                while (true) {
                 // socket object to receive incoming client requests
                 Socket client = server.accept();
-                System.out.println("New client connected " + client.getInetAddress().getHostAddress());
+//                System.out.println("New client connected " + client.getInetAddress().getHostAddress());
 
                 // create a new thread object of Runnable
                 ClientHandler clientSock = new ClientHandler(client);
 
                 // This thread will handle the client separately
                 new Thread(clientSock).start();
+
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -38,7 +48,12 @@ public class Server {
     private static class ClientHandler implements Runnable {
         private final Socket clientSocket;
 
-        // Constructor
+        /**
+         * Instantiates a new Client handler.
+         *
+         * @param socket the socket
+         */
+// Constructor
         public ClientHandler(Socket socket) {
             this.clientSocket = socket;
         }
@@ -55,6 +70,14 @@ public class Server {
                 System.out.println(str);
                 String[] split = str.split(" ");
 
+
+
+                //AUTHENTICATION
+                if (Integer.parseInt(split[2]) != 1 && findAuthToken(split[3]) == -1) {
+                    out.println("Invalid Auth Token");
+                    throw new IllegalArgumentException("Invalid Auth Token");
+                }
+
                 switch (Integer.parseInt(split[2])) {
 
                     //CREATE ACCOUNTS---------------------------------------------------------------
@@ -64,16 +87,14 @@ public class Server {
                         //Spelling check
                         boolean allLetters = split[3].chars().allMatch(Character::isLetter);
                         if (!allLetters) {
-                            System.out.println("Invalid Username");
                             out.println("Invalid Username");
-                            break;
+                            throw new IllegalArgumentException("Invalid Username");
                         }
 
                         //Username Exists? check
                         if (findUsername(split[3]) != -1) {
-                            System.out.println("Sorry, the user already exists");
                             out.println("Sorry, the user already exists");
-                            break;
+                            throw new IllegalArgumentException("Sorry, the user already exists");
                         }
 
 
@@ -82,13 +103,13 @@ public class Server {
 
 
                         //Token exist? check
-                        while (findAuthToken(auth + "") != -1) {
+                        while (findAuthToken(auth + "") != -1 || auth<1000) {
                             auth = random.nextInt(9999);
                         }
 
                         //Creating account
                         accounts.add(new Account(split[3], auth));
-                        System.out.println(accounts.getLast().username);
+                        System.out.println("New account created.\nUsername: "+accounts.getLast().getUsername()+"\nToken: "+auth);
                         out.println(auth);
 
                         break;
@@ -99,14 +120,11 @@ public class Server {
                         System.out.println("--Case 2--");
 
                         for (int i = 0; i < accounts.size(); i++) {
-                            if (accounts.get(i).authToken != Integer.parseInt(split[3])) {
-                                System.out.println(i + 1 + ". " + accounts.get(i).username);
-                                out.println(i + 1 + ". " + accounts.get(i).username);
+                            System.out.println(i + 1 + ". " + accounts.get(i).getUsername());
 
-                            }
+                            out.println(i + 1 + ". " + accounts.get(i).getUsername());
                         }
 
-                        Thread.currentThread().interrupt();
                         break;
 
 
@@ -114,18 +132,21 @@ public class Server {
                     case 3:
                         System.out.println("--Case 3--");
 
-                        int senderIndex = findAuthToken(split[3]);
-                        int receiverIndex = findUsername(split[4]);
-
-                        //Username-Token exists check
-                        if (senderIndex == -1 || receiverIndex == -1) {
-                            break;
+                        //Receiver exists check
+                        if (findUsername(split[4]) == -1) {
+                            throw new IllegalArgumentException("User does not exist");
                         }
 
-                        Message message = new Message(false, split[3], split[4], split[5]);
+                        StringBuilder body= new StringBuilder();
 
-                        accounts.get(receiverIndex).addMessageBox(message);
+                        for (int i = 5; i < split.length; i++) {
+                            body.append(split[i]).append(" ");
+                        }
 
+
+                        accounts.get(findUsername(split[4])).addMessageBox(new Message(accounts.get(findAuthToken(split[3])).getUsername(), body.toString()));
+                        System.out.println("OK");
+                        out.println("OK");
 
                         break;
 
@@ -134,18 +155,11 @@ public class Server {
                     case 4:
                         System.out.println("--Case 4--");
 
-                        if (findAuthToken(split[3]) == -1) {
-                            System.out.println("wrong token");
-                            break;
-                        }
 
-                        int k = accounts.get(findAuthToken(split[3])).getMessageBox().size();
+                        for (int i = 0; i <accounts.get(findAuthToken(split[3])).getMessageBox().size() ; i++) {
 
-                        for (int i = 0; i <k ; i++) {
-                            System.out.println(k+". from: "+accounts.get(findAuthToken(split[3])).getMessageBox().get(i).getSender());
-                            if (!accounts.get(findAuthToken(split[3])).getMessageBox().get(i).isRead){
-                                System.out.println("*");
-                            }
+                            System.out.println(i+". from: "+accounts.get(findAuthToken(split[3])).getMessageBox().get(i).getSender()+(accounts.get(findAuthToken(split[3])).getMessageBox().get(i).isRead()?"":"*"));
+                            out.println(i+". from: "+accounts.get(findAuthToken(split[3])).getMessageBox().get(i).getSender()+(accounts.get(findAuthToken(split[3])).getMessageBox().get(i).isRead()?"":"*"));
                         }
 
 
@@ -155,8 +169,13 @@ public class Server {
                     case 5:
                         System.out.println("--Case 5--");
 
-                        System.out.printf("("+accounts.get(findAuthToken(split[3])).getMessageBox().get(Integer.parseInt(split[4])).getSender()+")"+accounts.get(findAuthToken(split[3])).getMessageBox().get(Integer.parseInt(split[4])).getBody());
+                        if (accounts.get(findAuthToken(split[3])).getMessageBox().get(Integer.parseInt(split[4])) == null) {
+                            throw new IllegalArgumentException("Message ID does not exist");
+                        }
 
+                        System.out.printf("("+accounts.get(findAuthToken(split[3])).getMessageBox().get(Integer.parseInt(split[4])).getSender()+") "+accounts.get(findAuthToken(split[3])).getMessageBox().get(Integer.parseInt(split[4])).getBody());
+                        out.println("("+accounts.get(findAuthToken(split[3])).getMessageBox().get(Integer.parseInt(split[4])).getSender()+") "+accounts.get(findAuthToken(split[3])).getMessageBox().get(Integer.parseInt(split[4])).getBody());
+                        accounts.get(findAuthToken(split[3])).getMessageBox().get(Integer.parseInt(split[4])).setRead(true);
 
                         break;
 
@@ -164,17 +183,20 @@ public class Server {
                     case 6:
                         System.out.println("--Case 6--");
 
+                        if (accounts.get(findAuthToken(split[3])).getMessageBox().get(Integer.parseInt(split[4])) == null) {
+                            throw new IllegalArgumentException("Message does not exist");
+                        }
+
                         accounts.get(findAuthToken(split[3])).getMessageBox().remove(Integer.parseInt(split[4]));
+                        out.println("OK");
 
 
                         break;
                 }
 
-
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+            } catch (IllegalArgumentException | IOException e) {
+                System.out.printf(e.getMessage()+"\n");
             }
-            // command "finally" is omitted
         }
     }
 
@@ -182,48 +204,56 @@ public class Server {
     private static class Message {
 
         private boolean isRead;
-        private String sender;
-        private String receiver;
-        private String body;
+        private final String sender;
+        private final String body;
 
-        //Constructor
-        public Message(boolean isRead, String sender, String receiver, String body) {
-            this.isRead = isRead;
+        /**
+         * Instantiates a new Message.
+         *
+         * @param sender the sender
+         * @param body   the body
+         */
+//Constructor
+        public Message(String sender, String body) {
+            this.isRead = false;
             this.sender = sender;
-            this.receiver = receiver;
             this.body = body;
         }
 
+        /**
+         * Is read boolean.
+         *
+         * @return the boolean
+         */
         public boolean isRead() {
             return isRead;
         }
 
+        /**
+         * Sets read.
+         *
+         * @param read the read
+         */
         public void setRead(boolean read) {
             isRead = read;
         }
 
+        /**
+         * Gets sender.
+         *
+         * @return the sender
+         */
         public String getSender() {
             return sender;
         }
 
-        public void setSender(String sender) {
-            this.sender = sender;
-        }
-
-        public String getReceiver() {
-            return receiver;
-        }
-
-        public void setReceiver(String receiver) {
-            this.receiver = receiver;
-        }
-
+        /**
+         * Gets body.
+         *
+         * @return the body
+         */
         public String getBody() {
             return body;
-        }
-
-        public void setBody(String body) {
-            this.body = body;
         }
     }
 
@@ -231,33 +261,47 @@ public class Server {
     //----------------------------------Account----------------------------------//
     private static class Account {
 
-        private String username;
-        private int authToken;
-        private final List<Message> messageBox = new ArrayList<Message>();
+        private final String username;
+        private final int authToken;
+        private final List<Message> messageBox ;
 
-        //Constructor
+        /**
+         * Instantiates a new Account.
+         *
+         * @param username  the username
+         * @param authToken the auth token
+         */
+//Constructor
         public Account(String username, int authToken) {
             this.username = username;
             this.authToken = authToken;
+            this.messageBox = new ArrayList<>();
         }
 
 
+        /**
+         * Gets username.
+         *
+         * @return the username
+         */
         public String getUsername() {
             return username;
         }
 
-        public void setUsername(String username) {
-            this.username = username;
-        }
-
+        /**
+         * Gets auth token.
+         *
+         * @return the auth token
+         */
         public int getAuthToken() {
             return authToken;
         }
 
-        public void setAuthToken(int authToken) {
-            this.authToken = authToken;
-        }
-
+        /**
+         * Gets message box.
+         *
+         * @return the message box
+         */
         public List<Message> getMessageBox() {
             return messageBox;
         }
@@ -265,15 +309,20 @@ public class Server {
         public void addMessageBox(Message message) {
             messageBox.add(message);
         }
-
-
     }
 
+    /**
+     * Find username int.
+     *
+     * @param username the username
+     * @return the int
+     */
+//Method that returns an index of the place where the username is from
     public static int findUsername(String username) {
         int index = -1;
 
         for (int i = 0; i < accounts.size(); i++) {
-            if (accounts.get(i).username.equals(username)) {
+            if (accounts.get(i).getUsername().equals(username)) {
                 index = i;
             }
         }
@@ -281,11 +330,18 @@ public class Server {
         return index;
     }
 
+    /**
+     * Find auth token int.
+     *
+     * @param authToken the auth token
+     * @return the int
+     */
+//Method that returns an index of the place where the authentication token is from
     public static int findAuthToken(String authToken) {
         int index = -1;
 
         for (int i = 0; i < accounts.size(); i++) {
-            if (accounts.get(i).authToken == Integer.parseInt(authToken)) {
+            if (accounts.get(i).getAuthToken() == Integer.parseInt(authToken)) {
                 index = i;
             }
         }

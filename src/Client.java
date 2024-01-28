@@ -8,8 +8,8 @@ public class Client {
 
         try {
             if (args.length == 0) {
-                System.out.println("Usage: java Client <ip> <port number> <op_id> <username>");
-                System.exit(1);
+                System.out.println("Usage: java Client <ip> <port number> <op_id>");
+                throw new IllegalArgumentException("Not enough arguments provided");
             }
 
             String ipAddress = args[0];
@@ -17,27 +17,30 @@ public class Client {
 
             //Start Client Socket
             Socket socket = new Socket(ipAddress,portNumber);
-            System.out.println("Client started");
+//            System.out.println("Client started");
 
             BufferedReader received = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             PrintWriter sent = new PrintWriter(socket.getOutputStream(),true);
-            String str="";
+            StringBuilder str= new StringBuilder();
 
             //Convert args to line
-            for (int i = 0; i < args.length; i++) {
-                str = str + args[i] + " ";
+            for (String arg : args) {
+                str.append(arg).append(" ");
             }
 
             //Send to Server
             sent.println(str);
-            System.out.println("Arguments sent to server: "+str);
+//            System.out.println("Arguments sent to server: "+str);
 
-            while(true) {
-                System.out.println(received.readLine());
-
+            String serverResponse;
+            while(!(serverResponse = received.readLine()).equals("#terminate")) {
+//                System.out.println("Server returned: ");
+                System.out.println(serverResponse);
             }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+
+            socket.close();
+        } catch (IOException | IllegalArgumentException e) {
+            System.out.println(e.getMessage()+"\n");
         }
     }
 }
